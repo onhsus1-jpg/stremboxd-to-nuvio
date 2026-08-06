@@ -2,13 +2,15 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 
+// 🔽 YOUR EXTENDED RATINGS CONFIGURATION 🔽
+const HARDCODED_XRDB_CONFIG = "config=onhsusss&v=f8e5147f"; 
+
 const app = express();
 app.use(cors());
 
 // --- Helper Functions ---
 function decodeConfig(configStr) {
     try {
-        // Handle URL-safe base64 conversion
         let base64 = configStr.replace(/-/g, '+').replace(/_/g, '/');
         while (base64.length % 4) { base64 += '='; }
         const decoded = Buffer.from(base64, 'base64').toString('utf8');
@@ -20,6 +22,29 @@ function decodeConfig(configStr) {
 
 function getUpstreamBase(manifestUrl) {
     return manifestUrl.replace('/manifest.json', '');
+}
+
+// Helper to inject Extended Ratings artwork (Logo, Backdrop/Background, Thumbnail)
+function applyXrdbArtwork(meta, imdbId, xrdbConfig) {
+    if (!xrdbConfig || !imdbId) return;
+
+    let configQuery = xrdbConfig.trim();
+    
+    // Parse if user passed a full URL or plain alias
+    if (configQuery.includes('http')) {
+        try {
+            const urlObj = new URL(configQuery);
+            configQuery = urlObj.search.replace(/^\?/, '');
+        } catch (e) {
+            configQuery = HARDCODED_XRDB_CONFIG;
+        }
+    } else if (!configQuery.startsWith('config=')) {
+        configQuery = `config=${configQuery}`;
+    }
+
+    meta.logo = `https://extendedratings.com/logo/${imdbId}?${configQuery}`;
+    meta.background = `https://extendedratings.com/backdrop/${imdbId}?${configQuery}`;
+    meta.thumbnail = `https://extendedratings.com/thumbnail/${imdbId}?${configQuery}`;
 }
 
 // --- Frontend Route ---
@@ -45,11 +70,10 @@ app.get('/:config/manifest.json', async (req, res) => {
         const manifest = await response.json();
         
         // Modify manifest to safely differentiate it inside Nuvio
-        manifest.id = (manifest.id || "stremboxd") + ".btttr-wrapper";
-        manifest.name = (manifest.name || "Stremboxd") + " (BTTTR Wrapped)";
+        manifest.id = (manifest.id || "stremboxd") + ".btttr-xrdb-wrapper";
+        manifest.name = (manifest.name || "Stremboxd") + " (BTTTR + XRDB Wrapped)";
         manifest.description = "Proxied with live dynamic updates. " + (manifest.description || "");
         
-        // Caching manifest structure is safe (does not affect catalog updates)
         res.setHeader('Cache-Control', 'max-age=86400, stale-while-revalidate=86400'); 
         res.json(manifest);
     } catch (e) {
@@ -58,13 +82,12 @@ app.get('/:config/manifest.json', async (req, res) => {
     }
 });
 
-// --- Catalog Proxy (Wildcard to strictly preserve Stremio path rules & parameters) ---
+// --- Catalog Proxy ---
 app.get('/:config/catalog/*', async (req, res) => {
     const config = decodeConfig(req.params.config);
     if (!config) return res.status(400).json({ metas: [] });
     
     const upstreamBase = getUpstreamBase(config.u);
-    // Extrapolate exact path without modifying URL-encoded strings like 'genre=Action&skip=20'
     const proxyPath = req.originalUrl.replace(`/${req.params.config}`, '');
     const upstreamUrl = `${upstreamBase}${proxyPath}`;
 
@@ -80,11 +103,11 @@ app.get('/:config/catalog/*', async (req, res) => {
             data.metas = await Promise.all(data.metas.map(async (meta) => {
                 let imdbId = null;
                 
-                // 1. Determine IMDb ID from the item natively
+                // 1. Determine IMDb ID natively
                 if (meta.id && /^tt\d+$/.test(meta.id)) imdbId = meta.id;
                 else if (meta.imdb_id && /^tt\d+$/.test(meta.imdb_id)) imdbId = meta.imdb_id;
                 else {
-                    // 2. Safely fallback to metadata if missing
+                    // 2. Fallback check metadata
                     try {
                         const metaRes = await fetch(`${upstreamBase}/meta/${type}/${meta.id}.json`, { signal: AbortSignal.timeout(3000) });
                         if (metaRes.ok) {
@@ -97,26 +120,29 @@ app.get('/:config/catalog/*', async (req, res) => {
                     }
                 }
 
-                // 3. Inject BetterPosters specifically, replace {imdb_id}
                 if (imdbId) {
-                    meta.poster = config.p.replace('{imdb_id}', imdbId);
+                    // 3. BetterPosters for POSTERS ONLY
+                    if (config.p) {
+                        meta.poster = config.p.replace('{imdb_id}', imdbId);
+                    }
+                    // 4. Extended Ratings for LOGO, BACKDROP, and THUMBNAIL
+                    const xrdbConfigToUse = config.xrdb || HARDCODED_XRDB_CONFIG;
+                    applyXrdbArtwork(meta, imdbId, xrdbConfigToUse);
                 }
                 
                 return meta;
             }));
         }
         
-        // Extremely short 60s cache forces immediate updates in Nuvio Watchlists
         res.setHeader('Cache-Control', 'max-age=60, stale-while-revalidate=60');
         res.json(data);
     } catch (e) {
         console.error("Catalog proxy error:", e.message);
-        // Fail gracefully returning empty array so Nuvio doesn't crash on timeouts
         res.json({ metas: [] });
     }
 });
 
-// --- Meta Proxy (For fetching inside Movie Details view) ---
+// --- Meta Proxy (For Details View inside Nuvio) ---
 app.get('/:config/meta/*', async (req, res) => {
     const config = decodeConfig(req.params.config);
     if (!config) return res.status(400).json({ meta: null });
@@ -126,30 +152,4 @@ app.get('/:config/meta/*', async (req, res) => {
     const upstreamUrl = `${upstreamBase}${proxyPath}`;
 
     try {
-        const response = await fetch(upstreamUrl, { signal: AbortSignal.timeout(10000) });
-        if (!response.ok) throw new Error("Upstream error");
-        const data = await response.json();
-
-        if (data.meta) {
-            let imdbId = null;
-            if (data.meta.id && /^tt\d+$/.test(data.meta.id)) imdbId = data.meta.id;
-            else if (data.meta.imdb_id && /^tt\d+$/.test(data.meta.imdb_id)) imdbId = data.meta.imdb_id;
-
-            if (imdbId) {
-                data.meta.poster = config.p.replace('{imdb_id}', imdbId);
-            }
-        }
-
-        res.setHeader('Cache-Control', 'max-age=86400, stale-while-revalidate=86400');
-        res.json(data);
-    } catch (e) {
-        console.error("Meta proxy error:", e);
-        res.json({ meta: null });
-    }
-});
-
-// --- Server Init ---
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`BTTTR Wrapper listening on port ${PORT} on 0.0.0.0`);
-});
+        const response = await fetch(upstre
