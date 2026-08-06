@@ -1,7 +1,7 @@
 {
-  "name": "stremboxd-btttr-wrapper",
+  "name": "stremboxd-to-nuvio",
   "version": "1.0.0",
-  "description": "Live Stremboxd proxy wrapper that injects BetterPosters",
+  "description": "Enhanced Stremboxd proxy wrapper with ExtendedRatings images for Nuvio",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
