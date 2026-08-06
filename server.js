@@ -34,8 +34,8 @@ app.get('/configure', (req, res) => {
 // --- Manifest Proxy ---
 app.get('/:config/manifest.json', async (req, res) => {
     const config = decodeConfig(req.params.config);
-    if (!config || !config.u || !config.p) {
-        return res.status(400).json({ error: "Invalid configuration" });
+    if (!config || !config.u || !config.p || !config.b || !config.l || !config.t) {
+        return res.status(400).json({ error: "Invalid configuration - missing required URLs" });
     }
 
     try {
@@ -46,8 +46,8 @@ app.get('/:config/manifest.json', async (req, res) => {
         
         // Modify manifest to safely differentiate it inside Nuvio
         manifest.id = (manifest.id || "stremboxd") + ".btttr-wrapper";
-        manifest.name = (manifest.name || "Stremboxd") + " (BTTTR Wrapped)";
-        manifest.description = "Proxied with live dynamic updates. " + (manifest.description || "");
+        manifest.name = (manifest.name || "Stremboxd") + " (Enhanced with ExtendedRatings)";
+        manifest.description = "Proxied with live dynamic updates and ExtendedRatings images. " + (manifest.description || "");
         
         // Caching manifest structure is safe (does not affect catalog updates)
         res.setHeader('Cache-Control', 'max-age=86400, stale-while-revalidate=86400'); 
@@ -97,9 +97,19 @@ app.get('/:config/catalog/*', async (req, res) => {
                     }
                 }
 
-                // 3. Inject BetterPosters specifically, replace {imdb_id}
+                // 3. Inject all image types from ExtendedRatings
                 if (imdbId) {
+                    // Poster from Stremboxd (using BetterPosters pattern)
                     meta.poster = config.p.replace('{imdb_id}', imdbId);
+                    
+                    // Backdrop from ExtendedRatings
+                    meta.backdrop = config.b.replace('{imdb_id}', imdbId);
+                    
+                    // Logo from ExtendedRatings
+                    meta.logo = config.l.replace('{imdb_id}', imdbId);
+                    
+                    // Thumbnail from ExtendedRatings  
+                    meta.thumbnail = config.t.replace('{imdb_id}', imdbId);
                 }
                 
                 return meta;
@@ -136,7 +146,17 @@ app.get('/:config/meta/*', async (req, res) => {
             else if (data.meta.imdb_id && /^tt\d+$/.test(data.meta.imdb_id)) imdbId = data.meta.imdb_id;
 
             if (imdbId) {
+                // Poster from Stremboxd (using BetterPosters pattern)
                 data.meta.poster = config.p.replace('{imdb_id}', imdbId);
+                
+                // Backdrop from ExtendedRatings
+                data.meta.backdrop = config.b.replace('{imdb_id}', imdbId);
+                
+                // Logo from ExtendedRatings
+                data.meta.logo = config.l.replace('{imdb_id}', imdbId);
+                
+                // Thumbnail from ExtendedRatings  
+                data.meta.thumbnail = config.t.replace('{imdb_id}', imdbId);
             }
         }
 
@@ -151,5 +171,5 @@ app.get('/:config/meta/*', async (req, res) => {
 // --- Server Init ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`BTTTR Wrapper listening on port ${PORT} on 0.0.0.0`);
+    console.log(`Enhanced Stremboxd Wrapper listening on port ${PORT} on 0.0.0.0`);
 });
