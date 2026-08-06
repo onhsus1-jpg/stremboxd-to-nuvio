@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stremboxd + BetterPosters Wrapper</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 20px; max-width: 800px; margin: auto; background-color: #121212; color: #fff; }
+        input { width: 100%; padding: 12px; margin: 10px 0 20px; border-radius: 6px; border: 1px solid #333; background: #222; color: #fff; font-size: 14px;}
+        button { background: #E50914; color: white; border: none; padding: 12px 24px; font-size: 16px; border-radius: 6px; cursor: pointer; font-weight: bold;}
+        button:hover { background: #f40612; }
+        .result { margin-top: 30px; padding: 20px; background: #222; border-radius: 6px; word-break: break-all; border-left: 5px solid #4DA8DA; }
+        a { color: #4DA8DA; text-decoration: none;}
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <h1>Stremboxd + BetterPosters Config</h1>
+    <p>Proxy Stremboxd while converting standard posters to BetterPosters dynamically.</p>
+    
+    <label>Your Original Stremboxd Manifest URL:</label>
+    <input type="text" id="manifest" value="https://api.stremboxd.com/stremio/eb361c9e46b3112ff6b88195055ec3bc/manifest.json">
+    
+    <label>BetterPosters Artwork Pattern URL:</label>
+    <input type="text" id="pattern" value="https://btttr.cc/poster-qa/imdb/poster-default/{imdb_id}.jpg?rs=LB">
+    
+    <button onclick="generate()">Generate Install Link</button>
+
+    <div class="result" id="result-box" style="display:none;">
+        <h3>Your Addon is Ready!</h3>
+        <p><strong>Install directly in Nuvio:</strong></p>
+        <p><a id="installLink" href="#">Click here to install (Stremio Protocol)</a></p>
+        <p style="margin-top:20px; font-size:14px; color:#aaa;">Or, copy this HTTPS URL manually and paste it into Nuvio's "Add Addon" search bar:</p>
+        <code id="rawUrl" style="color: #4DA8DA; font-size: 15px;"></code>
+    </div>
+
+    <script>
+        function generate() {
+            const m = document.getElementById('manifest').value.trim();
+            const p = document.getElementById('pattern').value.trim();
+            if (!m || !p) return alert("Both fields are required");
+
+            const config = { u: m, p: p };
+            // URL-Safe Base64 encoding required for Express routers 
+            const encoded = btoa(JSON.stringify(config)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+            
+            const host = window.location.host;
+            const protocol = window.location.protocol;
+            
+            const installUrl = `stremio://${host}/${encoded}/manifest.json`;
+            const httpsUrl = `${protocol}//${host}/${encoded}/manifest.json`;
+            
+            const resultBox = document.getElementById('result-box');
+            const installLink = document.getElementById('installLink');
+            const rawUrl = document.getElementById('rawUrl');
+            
+            installLink.href = installUrl;
+            rawUrl.textContent = httpsUrl;
+            
+            resultBox.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
