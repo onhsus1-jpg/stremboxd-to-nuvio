@@ -150,6 +150,6 @@ app.get('/:config/meta/*', async (req, res) => {
 
 // --- Server Init ---
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`BTTTR Wrapper listening on port ${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`BTTTR Wrapper listening on port ${PORT} on 0.0.0.0`);
 });
