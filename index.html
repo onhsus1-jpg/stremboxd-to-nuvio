@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stremboxd + BetterPosters Wrapper</title>
+    <title>Stremboxd + ExtendedRatings Enhanced Wrapper</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 20px; max-width: 800px; margin: auto; background-color: #121212; color: #fff; }
         input { width: 100%; padding: 12px; margin: 10px 0 20px; border-radius: 6px; border: 1px solid #333; background: #222; color: #fff; font-size: 14px;}
@@ -12,22 +12,49 @@
         .result { margin-top: 30px; padding: 20px; background: #222; border-radius: 6px; word-break: break-all; border-left: 5px solid #4DA8DA; }
         a { color: #4DA8DA; text-decoration: none;}
         a:hover { text-decoration: underline; }
+        .image-preview { margin-top: 15px; padding: 15px; background: #1a1a1a; border-radius: 4px; }
+        .image-preview h4 { margin-top: 0; color: #aaa; }
+        .image-preview .url { color: #4DA8DA; font-size: 12px; }
+        .section { margin-bottom: 15px; }
     </style>
 </head>
 <body>
-    <h1>Stremboxd + BetterPosters Config</h1>
-    <p>Proxy Stremboxd while converting standard posters to BetterPosters dynamically.</p>
+    <h1>Stremboxd + ExtendedRatings Enhanced Config</h1>
+    <p>Proxy Stremboxd while adding ExtendedRatings images (backdrop, logo, thumbnail) dynamically.</p>
     
-    <label>Your Original Stremboxd Manifest URL:</label>
-    <input type="text" id="manifest" value="https://api.stremboxd.com/stremio/eb361c9e46b3112ff6b88195055ec3bc/manifest.json">
+    <div class="section">
+        <label>Your Original Stremboxd Manifest URL:</label>
+        <input type="text" id="manifest" value="https://api.stremboxd.com/stremio/eb361c9e46b3112ff6b88195055ec3bc/manifest.json">
+    </div>
     
-    <label>BetterPosters Artwork Pattern URL:</label>
-    <input type="text" id="pattern" value="https://btttr.cc/poster-qa/imdb/poster-default/{imdb_id}.jpg?rs=LB">
+    <div class="section">
+        <label>BetterPosters Artwork Pattern URL (Poster):</label>
+        <input type="text" id="poster" value="https://btttr.cc/poster-qa/imdb/poster-default/{imdb_id}.jpg?rs=LB">
+        <small style="color: #888;">Uses {imdb_id} placeholder</small>
+    </div>
+    
+    <div class="section">
+        <label>ExtendedRatings Backdrop URL:</label>
+        <input type="text" id="backdrop" value="https://extendedratings.com/backdrop/{imdb_id}?config=onhsusss&v=f8e5147f">
+        <small style="color: #888;">Uses {imdb_id} placeholder</small>
+    </div>
+    
+    <div class="section">
+        <label>ExtendedRatings Logo URL:</label>
+        <input type="text" id="logo" value="https://extendedratings.com/logo/{imdb_id}?config=onhsusss&v=f8e5147f">
+        <small style="color: #888;">Uses {imdb_id} placeholder</small>
+    </div>
+    
+    <div class="section">
+        <label>ExtendedRatings Thumbnail URL:</label>
+        <input type="text" id="thumbnail" value="https://extendedratings.com/thumbnail/{imdb_id}?config=onhsusss&v=f8e5147f">
+        <small style="color: #888;">Uses {imdb_id} placeholder</small>
+    </div>
     
     <button onclick="generate()">Generate Install Link</button>
 
     <div class="result" id="result-box" style="display:none;">
-        <h3>Your Addon is Ready!</h3>
+        <h3>Your Enhanced Addon is Ready!</h3>
         <p><strong>Install directly in Nuvio:</strong></p>
         <p><a id="installLink" href="#">Click here to install (Stremio Protocol)</a></p>
         <p style="margin-top:20px; font-size:14px; color:#aaa;">Or, copy this HTTPS URL manually and paste it into Nuvio's "Add Addon" search bar:</p>
@@ -37,10 +64,23 @@
     <script>
         function generate() {
             const m = document.getElementById('manifest').value.trim();
-            const p = document.getElementById('pattern').value.trim();
-            if (!m || !p) return alert("Both fields are required");
+            const p = document.getElementById('poster').value.trim();
+            const b = document.getElementById('backdrop').value.trim();
+            const l = document.getElementById('logo').value.trim();
+            const t = document.getElementById('thumbnail').value.trim();
+            
+            if (!m || !p || !b || !l || !t) {
+                return alert("All fields are required");
+            }
 
-            const config = { u: m, p: p };
+            const config = { 
+                u: m, 
+                p: p,
+                b: b,
+                l: l,
+                t: t
+            };
+            
             // URL-Safe Base64 encoding required for Express routers 
             const encoded = btoa(JSON.stringify(config)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
             
