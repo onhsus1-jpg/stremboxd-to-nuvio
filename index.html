@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stremboxd + BetterPosters + XRDB Wrapper</title>
+    <title>Stremboxd + BetterPosters Wrapper</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 20px; max-width: 800px; margin: auto; background-color: #121212; color: #fff; }
         input { width: 100%; padding: 12px; margin: 10px 0 20px; border-radius: 6px; border: 1px solid #333; background: #222; color: #fff; font-size: 14px;}
@@ -15,17 +15,14 @@
     </style>
 </head>
 <body>
-    <h1>Stremboxd + BetterPosters + XRDB Config</h1>
-    <p>Proxy Stremboxd using BetterPosters for posters, and Extended Ratings (XRDB) for backdrops, logos, and thumbnails.</p>
+    <h1>Stremboxd + BetterPosters Config</h1>
+    <p>Proxy Stremboxd while converting standard posters to BetterPosters dynamically.</p>
     
     <label>Your Original Stremboxd Manifest URL:</label>
     <input type="text" id="manifest" value="https://api.stremboxd.com/stremio/eb361c9e46b3112ff6b88195055ec3bc/manifest.json">
     
-    <label>BetterPosters Artwork Pattern URL (Posters):</label>
+    <label>BetterPosters Artwork Pattern URL:</label>
     <input type="text" id="pattern" value="https://btttr.cc/poster-qa/imdb/poster-default/{imdb_id}.jpg?rs=LB">
-
-    <label>Extended Ratings Config (Backdrops, Logos, Thumbnails):</label>
-    <input type="text" id="xrdb" value="config=onhsusss&v=f8e5147f">
     
     <button onclick="generate()">Generate Install Link</button>
 
@@ -41,12 +38,9 @@
         function generate() {
             const m = document.getElementById('manifest').value.trim();
             const p = document.getElementById('pattern').value.trim();
-            const xrdb = document.getElementById('xrdb').value.trim();
-            if (!m || !p) return alert("Manifest and BetterPosters fields are required");
+            if (!m || !p) return alert("Both fields are required");
 
             const config = { u: m, p: p };
-            if (xrdb) config.xrdb = xrdb;
-
             // URL-Safe Base64 encoding required for Express routers 
             const encoded = btoa(JSON.stringify(config)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
             
