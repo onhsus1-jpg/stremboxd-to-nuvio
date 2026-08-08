@@ -31,6 +31,10 @@ app.get('/configure', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+app.get('/:config/configure', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
 // --- Manifest Proxy ---
 app.get('/:config/manifest.json', async (req, res) => {
     const config = decodeConfig(req.params.config);
